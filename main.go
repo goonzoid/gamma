@@ -87,21 +87,30 @@ func callHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	downloadAction := &models.DownloadAction{
-		From: address() + "/function/" + name,
-		To:   "/home/vcap",
+	downloadAction := &models.EmitProgressAction{
+		Action: &models.DownloadAction{
+			From: address() + "/function/" + name,
+			To:   "/home/vcap",
+		},
+		StartMessage: "Starting download",
 	}
 
-	installAction := &models.RunAction{
-		Path:       "npm",
-		Args:       []string{"install", "/home/vcap/package"},
-		Privileged: true,
+	installAction := &models.EmitProgressAction{
+		Action: &models.RunAction{
+			Path:       "/usr/local/bin/npm",
+			Args:       []string{"install", "/home/vcap/package"},
+			Privileged: true,
+		},
+		StartMessage: "Starting install",
 	}
 
-	executeAction := &models.RunAction{
-		Path:       "node_modules/.bin/run",
-		Env:        call.Env,
-		Privileged: true,
+	executeAction := &models.EmitProgressAction{
+		Action: &models.RunAction{
+			Path:       "node_modules/.bin/run",
+			Env:        call.Env,
+			Privileged: true,
+		},
+		StartMessage: "Running",
 	}
 
 	serialAction := &models.SerialAction{
