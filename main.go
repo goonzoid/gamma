@@ -36,7 +36,7 @@ func address() string {
 	if err != nil {
 		return "http://192.168.59.3:3333"
 	}
-	return currentEnv.ApplicationUri[0]
+	return "http://" + currentEnv.ApplicationUri[0]
 }
 
 func registrationHandler(w http.ResponseWriter, r *http.Request) {
