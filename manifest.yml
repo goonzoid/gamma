@@ -1,0 +1,9 @@
+---
+applications:
+- name: gamma
+  memory: 128M
+  instances: 1
+  buildpack: https://github.com/cloudfoundry/buildpack-go.git
+  command: gamma
+  env:
+    RECEPTOR: http://REPLACE_ME_PLEASE.com
