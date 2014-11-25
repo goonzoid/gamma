@@ -50,3 +50,9 @@ Functions are called by HTTP POSTing to `/functions/:name/call` with the environ
 
 ```
 
+### see the logs
+
+If you have a Doppler running then you can see the logs by using the [`picard`][1]
+tool. The domain is `gamma`.
+
+[1]: https://github.com/1701-Diego/picard
