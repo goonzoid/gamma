@@ -2,11 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+
+	"code.google.com/p/go-uuid/uuid"
 
 	"github.com/cloudfoundry-incubator/receptor"
 	"github.com/cloudfoundry-incubator/runtime-schema/models"
@@ -19,43 +22,56 @@ func panicIfErr(err error) {
 	}
 }
 
-var functions map[string]Function = make(map[string]Function)
-
-type Function struct {
-	Name   string
-	Script string
-}
-
 type FunctionCall struct {
 	Env []models.EnvironmentVariable `json:"env"`
 }
 
+type FunctionCallResponse struct {
+	Guid string `json:"guid"`
+}
+
+func newGuid() string {
+	return uuid.NewUUID().String()
+}
+
 func registrationHandler(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get(":name")
-	script, _, err := r.FormFile("script")
+	tarball, _, err := r.FormFile("tarball")
 	if err != nil {
 		http.Error(w, "no script", http.StatusBadRequest)
 		return
 	}
+	defer tarball.Close()
 
-	contents, err := ioutil.ReadAll(script)
+	path := filepath.Join("functions", name)
+	output, err := os.Create(path)
 	if err != nil {
-		http.Error(w, "bad things", http.StatusInternalServerError)
+		log.Println(err)
+		http.Error(w, "could not create function tarball", http.StatusInternalServerError)
 		return
 	}
-	defer script.Close()
+	defer output.Close()
 
-	functions[name] = Function{
-		Name:   name,
-		Script: string(contents),
+	_, err = io.Copy(output, tarball)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "could not copy function tarball", http.StatusInternalServerError)
 	}
+
+	io.WriteString(w, "registered function: "+name)
+}
+
+func getFunctionHandler(w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Query().Get(":name")
+
+	http.ServeFile(w, r, "functions/"+name)
 }
 
 func callHandler(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get(":name")
 
-	function, found := functions[name]
-	if !found {
+	path := filepath.Join("functions", name)
+	if _, err := os.Stat(path); err != nil {
 		http.Error(w, "could not find function", http.StatusNotFound)
 		return
 	}
@@ -66,22 +82,40 @@ func callHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	args := []string{"-e", function.Script}
-
-	action := &models.RunAction{
-		Path: "node",
-		Args: args,
-		Env:  call.Env,
+	downloadAction := &models.DownloadAction{
+		From: "http://192.168.59.3:3333/function/" + name,
+		To:   "/home/vcap",
 	}
 
+	installAction := &models.RunAction{
+		Path:       "npm",
+		Args:       []string{"install", "/home/vcap/package"},
+		Privileged: true,
+	}
+
+	executeAction := &models.RunAction{
+		Path:       "node_modules/.bin/run",
+		Env:        call.Env,
+		Privileged: true,
+	}
+
+	serialAction := &models.SerialAction{
+		Actions: []models.Action{
+			downloadAction,
+			installAction,
+			executeAction,
+		},
+	}
+
+	guid := newGuid()
 	taskCreateRequest := receptor.TaskCreateRequest{
-		TaskGuid:              "pain",
-		Domain:                "thatsapar",
+		TaskGuid:              guid,
+		LogGuid:               "gamma",
+		Domain:                "gamma",
 		Stack:                 "lucid64",
 		RootFSPath:            "docker:///dockerfile/nodejs",
-		Action:                action,
+		Action:                serialAction,
 		CompletionCallbackURL: "http://192.168.59.3:3333/callback",
-		LogGuid:               "tempz",
 	}
 
 	if err := runTask(taskCreateRequest); err != nil {
@@ -89,7 +123,17 @@ func callHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	io.WriteString(w, "ok")
+	response := FunctionCallResponse{
+		Guid: guid,
+	}
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		message := fmt.Sprintf("failed to write response: %s", err.Error())
+		http.Error(w, message, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Add("Content-type", "application/json")
 }
 
 func callbackHandler(w http.ResponseWriter, r *http.Request) {
@@ -102,17 +146,11 @@ func runTask(request receptor.TaskCreateRequest) error {
 }
 
 func main() {
-	script, err := ioutil.ReadFile("script.js")
-	panicIfErr(err)
-
-	functions["default"] = Function{
-		Name:   "default",
-		Script: string(script),
-	}
-
+	os.MkdirAll("functions", 0777)
 	pat := pat.New()
 
 	pat.Put("/function/{name}", http.HandlerFunc(registrationHandler))
+	pat.Get("/function/{name}", http.HandlerFunc(getFunctionHandler))
 	pat.Post("/function/{name}/call", http.HandlerFunc(callHandler))
 	pat.Post("/callback", http.HandlerFunc(callbackHandler))
 

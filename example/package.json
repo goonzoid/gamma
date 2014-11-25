@@ -1,0 +1,9 @@
+{
+  "name": "gamma-example",
+  "description": "example nodejs package for use with gamma",
+  "author": "Chris Brown & Will Pragnell",
+  "version": "0.0.1",
+  "bin": {
+    "run": "./bin/run"
+  }
+}
