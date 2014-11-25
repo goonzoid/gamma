@@ -1,0 +1,51 @@
+{
+	"ImportPath": "github.com/goonzoid/gamma",
+	"GoVersion": "go1.3.1",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "code.google.com/p/go-uuid/uuid",
+			"Comment": "null-10",
+			"Rev": "5fac954758f5aa282478dc07fbb8709fe9575184"
+		},
+		{
+			"ImportPath": "github.com/bmizerany/pat",
+			"Rev": "b8a35001b773c267eb260a691f4e5499a3531600"
+		},
+		{
+			"ImportPath": "github.com/cloudfoundry-community/go-cfenv",
+			"Comment": "v1.3-15-gdb26cf7",
+			"Rev": "db26cf7b4a1a562641392e8455975dda9f0f90d0"
+		},
+		{
+			"ImportPath": "github.com/cloudfoundry-incubator/receptor",
+			"Rev": "6d7c2d8b86ee3c01714eff97a77a0660a2e32ee4"
+		},
+		{
+			"ImportPath": "github.com/cloudfoundry-incubator/runtime-schema/models",
+			"Rev": "6b12aaaba655ccc7782a1aca8e6ff875eaf8a208"
+		},
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "14f550f51af52180c2eefed15e5fd18d63c0a64a"
+		},
+		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Rev": "e444e69cbd2e2e3e0749a2f3c717cec491552bbf"
+		},
+		{
+			"ImportPath": "github.com/gorilla/pat",
+			"Rev": "ae2e162c4b2ae96aa66b596b2c18f17834299ed0"
+		},
+		{
+			"ImportPath": "github.com/mitchellh/mapstructure",
+			"Rev": "740c764bc6149d3f1806231418adb9f52c11bcbf"
+		},
+		{
+			"ImportPath": "github.com/tedsuo/rata",
+			"Rev": "9946bb39c19484e199efb807da145063323e6502"
+		}
+	]
+}
