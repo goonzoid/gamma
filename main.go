@@ -11,16 +11,13 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 
+	"github.com/cloudfoundry-community/go-cfenv"
 	"github.com/cloudfoundry-incubator/receptor"
 	"github.com/cloudfoundry-incubator/runtime-schema/models"
 	"github.com/gorilla/pat"
 )
 
-func panicIfErr(err error) {
-	if err != nil {
-		panic(err)
-	}
-}
+var client receptor.Client
 
 type FunctionCall struct {
 	Env []models.EnvironmentVariable `json:"env"`
@@ -30,8 +27,16 @@ type FunctionCallResponse struct {
 	Guid string `json:"guid"`
 }
 
-func newGuid() string {
-	return uuid.NewUUID().String()
+func functionPath(name string) string {
+	return filepath.Join("functions", name)
+}
+
+func address() string {
+	currentEnv, err := cfenv.Current()
+	if err != nil {
+		return "http://192.168.59.3:3333"
+	}
+	return currentEnv.ApplicationUri[0]
 }
 
 func registrationHandler(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +48,7 @@ func registrationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tarball.Close()
 
-	path := filepath.Join("functions", name)
+	path := functionPath(name)
 	output, err := os.Create(path)
 	if err != nil {
 		log.Println(err)
@@ -64,13 +69,13 @@ func registrationHandler(w http.ResponseWriter, r *http.Request) {
 func getFunctionHandler(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get(":name")
 
-	http.ServeFile(w, r, "functions/"+name)
+	http.ServeFile(w, r, functionPath(name))
 }
 
 func callHandler(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get(":name")
 
-	path := filepath.Join("functions", name)
+	path := functionPath(name)
 	if _, err := os.Stat(path); err != nil {
 		http.Error(w, "could not find function", http.StatusNotFound)
 		return
@@ -83,7 +88,7 @@ func callHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	downloadAction := &models.DownloadAction{
-		From: "http://192.168.59.3:3333/function/" + name,
+		From: address() + "/function/" + name,
 		To:   "/home/vcap",
 	}
 
@@ -107,7 +112,7 @@ func callHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	guid := newGuid()
+	guid := uuid.NewUUID().String()
 	taskCreateRequest := receptor.TaskCreateRequest{
 		TaskGuid:              guid,
 		LogGuid:               "gamma",
@@ -115,7 +120,8 @@ func callHandler(w http.ResponseWriter, r *http.Request) {
 		Stack:                 "lucid64",
 		RootFSPath:            "docker:///dockerfile/nodejs",
 		Action:                serialAction,
-		CompletionCallbackURL: "http://192.168.59.3:3333/callback",
+		CompletionCallbackURL: address() + "/callback",
+		LogSource:             "gamma:" + guid,
 	}
 
 	if err := runTask(taskCreateRequest); err != nil {
@@ -141,12 +147,18 @@ func callbackHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func runTask(request receptor.TaskCreateRequest) error {
-	client := receptor.NewClient("http://receptor.192.168.11.11.xip.io")
 	return client.CreateTask(request)
 }
 
 func main() {
 	os.MkdirAll("functions", 0777)
+
+	receptorAddress := os.Getenv("RECEPTOR")
+	if receptorAddress == "" {
+		log.Fatalln("RECEPTOR not set")
+	}
+	client = receptor.NewClient(receptorAddress)
+
 	pat := pat.New()
 
 	pat.Put("/function/{name}", http.HandlerFunc(registrationHandler))
@@ -155,5 +167,12 @@ func main() {
 	pat.Post("/callback", http.HandlerFunc(callbackHandler))
 
 	http.Handle("/", pat)
-	log.Fatalln(http.ListenAndServe(":3333", nil))
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3333"
+	}
+
+	log.Println("Starting gamma...")
+	log.Fatalln(http.ListenAndServe(":"+port, nil))
 }
