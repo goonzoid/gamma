@@ -1,12 +1,12 @@
 # γ (gamma)
 
-*like λ, but with more #grime*
+*like λ, but with more __#grime__*
 
 ![PARS R US](http://i.imgur.com/RrJjrFZ.gif)
 
 ## about
 
-You can push NodeJS programs into the cloud and then run them when events happen.
+You can push nodejs programs into the cloud and then run them when events happen.
 
 ## usage
 
