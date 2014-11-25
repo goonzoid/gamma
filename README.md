@@ -26,13 +26,13 @@ See `/example` in the repo for a simple example.
 
 ### register your function
 
-Functions are registered by HTTP PUTing a nodejs package tarball (made with `npm pack`) to `/functions/:name`, passing the tarball as a form parameter named `tarball`.
+Functions are registered by HTTP PUTing a nodejs package tarball (made with `npm pack`) to `/function/:name`, passing the tarball as a form parameter named `tarball`.
 
 See `/scripts/register_function` for an example.
 
 ### call your function
 
-Functions are called by HTTP POSTing to `/functions/:name/call` with the environment variables you want to run your script with.
+Functions are called by HTTP POSTing to `/function/:name/call` with the environment variables you want to run your script with.
 
 ```
 {
