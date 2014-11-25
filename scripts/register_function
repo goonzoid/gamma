@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -e
+
+pushd example
+  rm -f *.tgz
+  npm pack
+popd
+
+curl -X PUT localhost:3333/function/tempz -F tarball=@example/gamma-example-0.0.1.tgz
