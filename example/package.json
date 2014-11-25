@@ -5,5 +5,8 @@
   "version": "0.0.1",
   "bin": {
     "run": "./bin/run"
+  },
+  "dependencies": {
+    "aws-sdk": "2.0.28"
   }
 }
